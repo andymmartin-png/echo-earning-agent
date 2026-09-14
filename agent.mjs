@@ -120,44 +120,6 @@ async function tokuRail() {
   } catch (e) { return { error: e.message } }
 }
 
-// GitHub PR watch (2026-07-05): our first real ugig rail is profullstack's pay-per-merged-PR bounty.
-// Payment is OFF-platform + manual — he pays only AFTER a PR merges AND we send an invoice on ugig
-// (no escrow guarantees it; the wallet watcher above catches the money itself). So we must catch the
-// MERGE transition to trigger the invoice step, or a merged PR sits unbilled forever. Searches our
-// authored PRs across the profullstack org; merged = pull_request.merged_at set. Fires once on a rise.
-async function githubPrs() {
-  try {
-    const q = encodeURIComponent('author:Echolonius type:pr org:profullstack')
-    const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'echo-earning-agent' }
-    if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
-    const r = await fetch(`https://api.github.com/search/issues?q=${q}&per_page=50`, { headers, signal: AbortSignal.timeout(10000) })
-    if (!r.ok) return { error: `HTTP ${r.status}` }
-    const d = await r.json()
-    const prs = (d.items || []).map((p) => ({
-      repo: (p.repository_url || '').split('/').pop(),
-      num: p.number,
-      title: (p.title || '').slice(0, 50),
-      merged: Boolean(p.pull_request && p.pull_request.merged_at),
-      state: p.state,
-    }))
-    return { total: prs.length, merged: prs.filter((p) => p.merged).length, prs }
-  } catch (e) { return { error: e.message } }
-}
-
-// Watch our submitted hackathon specifically — it drops off the "live" feed after its deadline,
-// but we still need to catch the winners announcement (submission 7ed59a67, ~$500–3000 if we place).
-async function hackathonStatus() {
-  const key = process.env.SUPERTEAM_API_KEY
-  if (!key) return { skipped: true }
-  try {
-    const r = await fetch('https://superteam.fun/api/agents/listings/details/imperial-ai-agent-hackathon-build-the-agent-economy', { headers: { Authorization: `Bearer ${key}` } })
-    if (!r.ok) return { error: `HTTP ${r.status}` }
-    const d = await r.json()
-    const l = d.listing || d
-    return { status: l.status, isActive: l.isActive, winnersAnnounced: l.isWinnersAnnounced ?? l.winnersAnnouncedAt ?? null }
-  } catch (e) { return { error: e.message } }
-}
-
 // Solana-side USDC (second payment rail added 2026-07-05; receive-only wallet).
 /* const SOL_WALLET = '3wbinZDnWmDxHMLtACNrskwZvRwg4KYbBWw1wuviXXHT'
 async function solUsdc() {
@@ -195,18 +157,16 @@ const usdc = await baseUsdc()
 //const solNativeBal = await solNative()
 const superteam = await superteamLive()
 const openTask = await openTaskRail()
-const hackathon = await hackathonStatus()
 const dealwork = await dealworkRail()
 const toku = await tokuRail()
-const github = await githubPrs()
 
 // Balance delta vs the previous run — a payment landing is THE profit event, so flag it loudly
 // instead of leaving it as a quietly-changed number nobody reads. Also carry forward the previous
 // winners state so we can notify only on the TRANSITION (fire once, not every run forever).
-let prevUsdc = null, prevSol = null, prevSolNative = null, prevWinners = false, prevActionable = 0, prevMerged = 0, prevTokuCents = null
+let prevUsdc = null, prevSol = null, prevSolNative = null, prevActionable = 0, prevTokuCents = null
 try {
   const lines = readFileSync(new URL('./history.jsonl', import.meta.url), 'utf8').trim().split('\n')
-  if (lines.length) { const p = JSON.parse(lines[lines.length - 1]); if (typeof p.baseUsdc === 'number') prevUsdc = p.baseUsdc; if (typeof p.solUsdc === 'number') prevSol = p.solUsdc; if (typeof p.solNative === 'number') prevSolNative = p.solNative; prevWinners = Boolean(p.winnersFired); prevActionable = p.dealwork?.actionable || 0; prevMerged = p.github?.merged || 0; if (typeof p.toku?.balanceCents === 'number') prevTokuCents = p.toku.balanceCents }
+  if (lines.length) { const p = JSON.parse(lines[lines.length - 1]); if (typeof p.baseUsdc === 'number') prevUsdc = p.baseUsdc; if (typeof p.solUsdc === 'number') prevSol = p.solUsdc; if (typeof p.solNative === 'number') prevSolNative = p.solNative; prevActionable = p.dealwork?.actionable || 0; if (typeof p.toku?.balanceCents === 'number') prevTokuCents = p.toku.balanceCents }
 } catch {}
 const delta = (typeof usdc === 'number' && typeof prevUsdc === 'number') ? usdc - prevUsdc : 0
 // ugig's PREFERRED payout is usdc_sol, so a real payment most likely lands on Solana — diff it too or
@@ -216,20 +176,11 @@ const delta = (typeof usdc === 'number' && typeof prevUsdc === 'number') ? usdc 
 // A dealwork contract appearing means a bid was ACCEPTED and escrow is locked — work is owed and
 // paid-for. Same transition-only alert discipline as payments: fire once when the count rises.
 const newContract = (dealwork.actionable || 0) > prevActionable
-// A PR just merged → the bounty is now billable; we must send the invoice on ugig. Fire once on a rise.
-const newMerge = (github.merged || 0) > prevMerged
 // toku wallet is platform-custodied USD cents; a rise = someone paid for our work there. Transition-only.
 const tokuDelta = (typeof toku.balanceCents === 'number' && typeof prevTokuCents === 'number') ? toku.balanceCents - prevTokuCents : 0
 
-// Robust winners watch: this fires exactly once, after Jul 6, and CANNOT be tested until then — so
-// treat ANY truthy signal as fired and shout. This is the $500–3000 event; it must not fail quietly.
-const winnersFired = Boolean(hackathon.winnersAnnounced)
-// Notify the human ONLY on the transition into a real event (winners just announced, or money just
-// landed) — the workflow turns this sentinel into a failed run, which GitHub emails the repo owner.
-// Writing it only on the transition means one email, not a failure on every subsequent run.
-const justWon = winnersFired && !prevWinners
 // const notify = justWon || delta > 0 || solDelta > 0 || solNativeDelta > 0 || newContract || newMerge || tokuDelta > 0
-const notify = justWon || delta > 0 || newContract || newMerge || tokuDelta > 0
+const notify = delta > 0 || newContract || tokuDelta > 0
 
 // remember which listing slugs we have already seen, so we can flag genuinely NEW ones
 let seen = []
@@ -240,7 +191,7 @@ const freshDetail = (superteam.open || []).filter((o) => fresh.includes(o.slug))
 writeFileSync(new URL('./seen-listings.json', import.meta.url), JSON.stringify([...new Set([...seen, ...openSlugs])], null, 0))
 
 // const snapshot = { ts: now, baseUsdc: usdc, solUsdc: solUsdcBal, solNative: solNativeBal, delta, solDelta, solNativeDelta, service, paidRoute, intelPipeline, openTask, hackathon, winnersFired, dealwork, toku, github, superteam, newListings: fresh }
-const snapshot = { ts: now, baseUsdc: usdc, delta, service, openTask, hackathon, winnersFired, dealwork, toku, github, superteam, newListings: fresh }
+const snapshot = { ts: now, baseUsdc: usdc, delta, service, openTask, dealwork, toku, superteam, newListings: fresh }
 appendFileSync(new URL('./history.jsonl', import.meta.url), JSON.stringify(snapshot) + '\n')
 
 const md = `# Earning agent status
@@ -257,12 +208,6 @@ _Last run: ${now} (UTC), on GitHub Actions._
 - **OpenTask** router: **${openTask.state}**${openTask.live?.length ? ` · LIVE methods: ${openTask.live.join(', ')} — ACT NOW` : ' _(watching for revival; speaks x402-v2 our service already supports)_'}
 - **dealwork.ai** (agent echo-fable): ${dealwork.skipped ? `_${dealwork.skipped}_` : dealwork.error ? `_err: ${dealwork.error}_` : `heartbeat **${dealwork.heartbeat}** · bids: ${dealwork.bids?.map((b) => `${b.status} $${b.amount}`).join(', ') || 'none'} · contracts: ${dealwork.contracts?.length ? dealwork.contracts.map((c) => `${c.state} $${c.amount ?? '?'}`).join(', ') : 'none'}${dealwork.actionable ? ' · ⚡ **ESCROW LOCKED — WORK IS OWED, open a session**' : ''}`}
 - **toku.agency** (agent echo-fable, real-USD wallet): ${toku.skipped ? `_${toku.skipped}_` : toku.error ? `_err: ${toku.error}_` : `balance **$${((toku.balanceCents || 0) / 100).toFixed(2)}** · ${toku.txs} transactions · ${toku.unread || 0} unread${toku.unread ? ' · 📬 **UNREAD NOTIFICATION — possible hire/DM, open a session**' : ''}${tokuDelta > 0 ? ` · 🎉 **+$${(tokuDelta / 100).toFixed(2)} earned since last run!**` : ''}`}
-
-## 🔧 profullstack PR bounties (pay-per-merged-PR on ugig; invoice required after merge)
-- ${github.error ? `_err: ${github.error}_` : github.prs?.length ? `${github.merged}/${github.total} merged · ${github.prs.map((p) => `${p.merged ? '✅' : p.state === 'closed' ? '❌' : '⏳'} ${p.repo}#${p.num}`).join(', ')}${newMerge ? ' · 💵 **A PR JUST MERGED — SEND THE INVOICE ON ugig NOW**' : ''}` : '_no PRs found yet_'}
-
-## 🏆 Imperial hackathon (our submission 7ed59a67 — ~$500–3000 if we place)
-- listing status: **${hackathon.status ?? hackathon.error ?? 'n/a'}**${winnersFired ? ` · 🏆 **WINNERS ANNOUNCED — CHECK CLAIM: superteam.fun/earn/claim/415BE325D969CE8A28E7EC7A**` : ''}
 
 ## 🎯 Open agent listings (Superteam) — AGENT_ONLY first (lowest competition)
 ${superteam.skipped ? `_scan skipped: ${superteam.skipped}_`
@@ -284,14 +229,10 @@ writeFileSync(new URL('./status.md', import.meta.url), md)
 // current status.md and can just ask. Written AFTER status.md so a commit still captures state.
 const NOTIFY = new URL('./NOTIFY.txt', import.meta.url)
 if (notify) {
-  const msg = justWon
-    ? `🏆 HACKATHON WINNERS ANNOUNCED (${now}) — claim at superteam.fun/earn/claim/415BE325D969CE8A28E7EC7A`
-    : (delta > 0 || solDelta > 0 || solNativeDelta > 0)
-    ? `💰 PAYMENT RECEIVED (${now}) — ${delta > 0 ? `+${delta.toFixed(6)} USDC on Base (total ${usdc})` : ''}${delta > 0 && solDelta > 0 ? ' + ' : ''}${solDelta > 0 ? `+${solDelta.toFixed(6)} USDC on Solana (total ${solUsdcBal})` : ''}${solNativeDelta > 0 ? ` +${solNativeDelta.toFixed(9)} native SOL (total ${solNativeBal})` : ''}`
+  const msg = delta > 0
+    ? `💰 PAYMENT RECEIVED (${now}) — +${delta.toFixed(6)} USDC on Base (total ${usdc})`
     : tokuDelta > 0
     ? `💰 TOKU PAYMENT (${now}) — +$${(tokuDelta / 100).toFixed(2)} in the toku.agency wallet (total $${((toku.balanceCents || 0) / 100).toFixed(2)}); withdrawal needs one-time Stripe onboarding`
-    : newMerge
-    ? `💵 PR MERGED (${now}) — a profullstack PR was merged; send the invoice on ugig now to get paid`
     : newContract
     ? `⚡ DEALWORK BID ACCEPTED (${now}) — escrow locked, work is owed; open a Claude session to deliver`
     : `event (${now})`
@@ -305,8 +246,6 @@ console.log('status:', JSON.stringify(snapshot))
 if (delta > 0) console.log(`::notice title=PAYMENT RECEIVED::+${delta.toFixed(6)} USDC landed on Base — total ${usdc}`)
 //if (solDelta > 0) console.log(`::notice title=PAYMENT RECEIVED::+${solDelta.toFixed(6)} USDC landed on Solana — total ${solUsdcBal}`)
 //if (solNativeDelta > 0) console.log(`::notice title=PAYMENT RECEIVED::+${solNativeDelta.toFixed(9)} native SOL landed — total ${solNativeBal}`)
-if (newMerge) console.log('::notice title=PR MERGED::a profullstack PR merged — send the invoice on ugig now')
-if (winnersFired) console.log('::notice title=HACKATHON WINNERS ANNOUNCED::claim at superteam.fun/earn/claim/415BE325D969CE8A28E7EC7A')
 if (openTask.live?.length) console.log(`::notice title=OPENTASK RAIL LIVE::methods ${openTask.live.join(', ')} — a new earning source just opened`)
 if (newContract) console.log('::notice title=DEALWORK BID ACCEPTED::escrow locked — work is owed, open a session to deliver')
 if (tokuDelta > 0) console.log(`::notice title=TOKU PAYMENT::+$${(tokuDelta / 100).toFixed(2)} USD landed in the toku.agency wallet — total $${((toku.balanceCents || 0) / 100).toFixed(2)}`)
