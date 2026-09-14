@@ -10,7 +10,7 @@
  */
 import { writeFileSync, appendFileSync, readFileSync, unlinkSync } from 'node:fs'
 
-const EVM_WALLET = '0xd194AB36E66BccDD80f19b56757CFe52EdEd49af' // Base USDC receive-only
+const EVM_WALLET = '0xA069C34DD4D9f271A0b3AFa220F36F6891c434cD' // Base USDC receive-only
 const BASE_USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 const now = new Date().toISOString()
 
@@ -193,7 +193,7 @@ async function hackathonStatus() {
 }
 
 // Solana-side USDC (second payment rail added 2026-07-05; receive-only wallet).
-const SOL_WALLET = '3wbinZDnWmDxHMLtACNrskwZvRwg4KYbBWw1wuviXXHT'
+/* const SOL_WALLET = '3wbinZDnWmDxHMLtACNrskwZvRwg4KYbBWw1wuviXXHT'
 async function solUsdc() {
   try {
     const r = await fetch('https://api.mainnet-beta.solana.com', {
@@ -222,10 +222,11 @@ async function solNative() {
     return (j?.result?.value ?? 0) / 1e9
   } catch (e) { return `err:${e.message}` }
 }
+*/
 
 const usdc = await baseUsdc()
-const solUsdcBal = await solUsdc()
-const solNativeBal = await solNative()
+//const solUsdcBal = await solUsdc()
+//const solNativeBal = await solNative()
 const superteam = await superteamLive()
 const service = await serviceHealth()
 const paidRoute = await paidRouteHealth()
@@ -247,8 +248,8 @@ try {
 const delta = (typeof usdc === 'number' && typeof prevUsdc === 'number') ? usdc - prevUsdc : 0
 // ugig's PREFERRED payout is usdc_sol, so a real payment most likely lands on Solana — diff it too or
 // the most-likely money event would change a number nobody's alerted to. Same transition-only rule.
-const solDelta = (typeof solUsdcBal === 'number' && typeof prevSol === 'number') ? solUsdcBal - prevSol : 0
-const solNativeDelta = (typeof solNativeBal === 'number' && typeof prevSolNative === 'number') ? solNativeBal - prevSolNative : 0
+//const solDelta = (typeof solUsdcBal === 'number' && typeof prevSol === 'number') ? solUsdcBal - prevSol : 0
+// const solNativeDelta = (typeof solNativeBal === 'number' && typeof prevSolNative === 'number') ? solNativeBal - prevSolNative : 0
 // A dealwork contract appearing means a bid was ACCEPTED and escrow is locked — work is owed and
 // paid-for. Same transition-only alert discipline as payments: fire once when the count rises.
 const newContract = (dealwork.actionable || 0) > prevActionable
@@ -264,7 +265,8 @@ const winnersFired = Boolean(hackathon.winnersAnnounced)
 // landed) — the workflow turns this sentinel into a failed run, which GitHub emails the repo owner.
 // Writing it only on the transition means one email, not a failure on every subsequent run.
 const justWon = winnersFired && !prevWinners
-const notify = justWon || delta > 0 || solDelta > 0 || solNativeDelta > 0 || newContract || newMerge || tokuDelta > 0
+// const notify = justWon || delta > 0 || solDelta > 0 || solNativeDelta > 0 || newContract || newMerge || tokuDelta > 0
+const notify = justWon || delta > 0 || newContract || newMerge || tokuDelta > 0
 
 // remember which listing slugs we have already seen, so we can flag genuinely NEW ones
 let seen = []
@@ -274,7 +276,8 @@ const fresh = openSlugs.filter((s) => !seen.includes(s))
 const freshDetail = (superteam.open || []).filter((o) => fresh.includes(o.slug))
 writeFileSync(new URL('./seen-listings.json', import.meta.url), JSON.stringify([...new Set([...seen, ...openSlugs])], null, 0))
 
-const snapshot = { ts: now, baseUsdc: usdc, solUsdc: solUsdcBal, solNative: solNativeBal, delta, solDelta, solNativeDelta, service, paidRoute, intelPipeline, openTask, hackathon, winnersFired, dealwork, toku, github, superteam, newListings: fresh }
+// const snapshot = { ts: now, baseUsdc: usdc, solUsdc: solUsdcBal, solNative: solNativeBal, delta, solDelta, solNativeDelta, service, paidRoute, intelPipeline, openTask, hackathon, winnersFired, dealwork, toku, github, superteam, newListings: fresh }
+const snapshot = { ts: now, baseUsdc: usdc, delta, service, paidRoute, intelPipeline, openTask, hackathon, winnersFired, dealwork, toku, github, superteam, newListings: fresh }
 appendFileSync(new URL('./history.jsonl', import.meta.url), JSON.stringify(snapshot) + '\n')
 
 const md = `# Earning agent status
@@ -283,8 +286,6 @@ _Last run: ${now} (UTC), on GitHub Actions._
 
 ## 💰 Wallet (real earnings land here)
 - **Base USDC** \`${EVM_WALLET}\`: **${usdc}**${delta > 0 ? ` · 🎉 **+${delta.toFixed(6)} received since last run!**` : ''}
-- **Solana USDC** \`${SOL_WALLET}\`: **${solUsdcBal}**${solDelta > 0 ? ` · 🎉 **+${solDelta.toFixed(6)} received since last run!**` : ''}
-- **Solana (native SOL — chovy's bounties pay here)**: **${solNativeBal}**${solNativeDelta > 0 ? ` · 🎉 **+${solNativeDelta.toFixed(9)} SOL received since last run!**` : ''}
 
 ## 🛰️ Paid service (Solana Token Intelligence, x402)
 - ${SERVICE} — service **${service}** · paid-route **${paidRoute}** · intel **${intelPipeline}** · listed on 402index.io
@@ -339,8 +340,8 @@ if (notify) {
 console.log('status:', JSON.stringify(snapshot))
 // Loud CI signals for the events that actually matter — these surface in the Actions run summary.
 if (delta > 0) console.log(`::notice title=PAYMENT RECEIVED::+${delta.toFixed(6)} USDC landed on Base — total ${usdc}`)
-if (solDelta > 0) console.log(`::notice title=PAYMENT RECEIVED::+${solDelta.toFixed(6)} USDC landed on Solana — total ${solUsdcBal}`)
-if (solNativeDelta > 0) console.log(`::notice title=PAYMENT RECEIVED::+${solNativeDelta.toFixed(9)} native SOL landed — total ${solNativeBal}`)
+//if (solDelta > 0) console.log(`::notice title=PAYMENT RECEIVED::+${solDelta.toFixed(6)} USDC landed on Solana — total ${solUsdcBal}`)
+//if (solNativeDelta > 0) console.log(`::notice title=PAYMENT RECEIVED::+${solNativeDelta.toFixed(9)} native SOL landed — total ${solNativeBal}`)
 if (newMerge) console.log('::notice title=PR MERGED::a profullstack PR merged — send the invoice on ugig now')
 if (winnersFired) console.log('::notice title=HACKATHON WINNERS ANNOUNCED::claim at superteam.fun/earn/claim/415BE325D969CE8A28E7EC7A')
 if (openTask.live?.length) console.log(`::notice title=OPENTASK RAIL LIVE::methods ${openTask.live.join(', ')} — a new earning source just opened`)
