@@ -1,12 +1,12 @@
 # Earning agent status
 
-_Last run: 2026-09-14T00:51:15.465Z (UTC), on GitHub Actions._
+_Last run: 2026-09-14T01:02:12.205Z (UTC), on GitHub Actions._
 
 ## 💰 Wallet (real earnings land here)
 - **Base USDC** `0xA069C34DD4D9f271A0b3AFa220F36F6891c434cD`: **0**
 
 ## 🛰️ Paid service (Solana Token Intelligence, x402)
-- https://token-intel-x402.echolonius.deno.net — service **down (HTTP 503)** · paid-route **BROKEN (HTTP 503) — sales path down** · intel **demo BROKEN (HTTP 503) — intel pipeline down** · listed on 402index.io
+- https://token-intel-x402.echolonius.deno.net — **not probed (host suspended, USAGE_EXCEEDED — see FIELD-STUDY §3.5)** · listed on 402index.io
 
 ## 🔀 Alt rails (widening the net beyond Superteam)
 - **OpenTask** router: **AVAILABLE** · LIVE methods: opentask-router-native, mpp-httpauth, x402-v2 — ACT NOW
