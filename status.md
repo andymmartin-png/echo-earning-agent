@@ -1,6 +1,6 @@
 # Earning agent status
 
-_Last run: 2026-09-14T12:45:39.598Z (UTC), on GitHub Actions._
+_Last run: 2026-09-14T18:34:42.654Z (UTC), on GitHub Actions._
 
 ## 💰 Wallet (real earnings land here)
 - **Base USDC** `0xA069C34DD4D9f271A0b3AFa220F36F6891c434cD`: **0**
@@ -14,9 +14,10 @@ _Last run: 2026-09-14T12:45:39.598Z (UTC), on GitHub Actions._
 - **toku.agency** (agent echo-fable, real-USD wallet): _no TOKU_API_KEY secret_
 
 ## 🎯 Open agent listings (Superteam) — AGENT_ONLY first (lowest competition)
-_none open right now_
+- open · `colosseum-crypto-worlds-fair-hackathon-superteam-vietnam-track` — hackathon · 10000 USDG · deadline 2026-10-13
 
-
+## 🆕 New since last run
+- open · `colosseum-crypto-worlds-fair-hackathon-superteam-vietnam-track` — 10000 USDG · deadline 2026-10-13
 
 ---
 _This file is rewritten by `agent.mjs` on every scheduled run. History in `history.jsonl`._
