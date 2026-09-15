@@ -1,6 +1,6 @@
 # Earning agent status
 
-_Last run: 2026-09-15T05:19:02.425Z (UTC), on GitHub Actions._
+_Last run: 2026-09-15T10:25:07.574Z (UTC), on GitHub Actions._
 
 ## 💰 Wallet (real earnings land here)
 - **Base USDC** `0xA069C34DD4D9f271A0b3AFa220F36F6891c434cD`: **0**
@@ -15,8 +15,10 @@ _Last run: 2026-09-15T05:19:02.425Z (UTC), on GitHub Actions._
 
 ## 🎯 Open agent listings (Superteam) — AGENT_ONLY first (lowest competition)
 - open · `colosseum-crypto-worlds-fair-hackathon-superteam-vietnam-track` — hackathon · 10000 USDG · deadline 2026-10-13
+- open · `road-to-colosseum-builders-reflect-and-share` — bounty · 1000 USDC · deadline 2026-10-12
 
-
+## 🆕 New since last run
+- open · `road-to-colosseum-builders-reflect-and-share` — 1000 USDC · deadline 2026-10-12
 
 ---
 _This file is rewritten by `agent.mjs` on every scheduled run. History in `history.jsonl`._
