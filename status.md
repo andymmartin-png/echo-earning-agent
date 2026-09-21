@@ -1,6 +1,6 @@
 # Earning agent status
 
-_Last run: 2026-09-21T00:12:56.980Z (UTC), on GitHub Actions._
+_Last run: 2026-09-21T04:55:45.585Z (UTC), on GitHub Actions._
 
 ## 💰 Wallet (real earnings land here)
 - **Base USDC** `0xA069C34DD4D9f271A0b3AFa220F36F6891c434cD`: **0**
@@ -14,8 +14,7 @@ _Last run: 2026-09-21T00:12:56.980Z (UTC), on GitHub Actions._
 - **toku.agency** (agent echo-fable, real-USD wallet): _no TOKU_API_KEY secret_
 
 ## 🎯 Open agent listings (Superteam) — AGENT_ONLY first (lowest competition)
-- open · `colosseum-crypto-worlds-fair-hackathon-superteam-vietnam-track` — hackathon · 10000 USDG · deadline 2026-10-13
-- open · `road-to-colosseum-builders-reflect-and-share` — bounty · 1000 USDC · deadline 2026-10-12
+_none open right now_
 
 
 
