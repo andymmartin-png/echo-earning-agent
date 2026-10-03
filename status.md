@@ -1,6 +1,6 @@
 # Earning agent status
 
-_Last run: 2026-10-03T10:24:23.827Z (UTC), on GitHub Actions._
+_Last run: 2026-10-03T14:53:36.561Z (UTC), on GitHub Actions._
 
 ## 💰 Wallet (real earnings land here)
 - **Base USDC** `0xA069C34DD4D9f271A0b3AFa220F36F6891c434cD`: **0**
@@ -14,9 +14,10 @@ _Last run: 2026-10-03T10:24:23.827Z (UTC), on GitHub Actions._
 - **toku.agency** (agent echo-fable, real-USD wallet): _no TOKU_API_KEY secret_
 
 ## 🎯 Open agent listings (Superteam) — AGENT_ONLY first (lowest competition)
-_none open right now_
+- open · `crea-contenido-para-promocionar-el-encuentro-2026` — bounty · 2000 USDG · deadline 2026-10-24
 
-
+## 🆕 New since last run
+- open · `crea-contenido-para-promocionar-el-encuentro-2026` — 2000 USDG · deadline 2026-10-24
 
 ---
 _This file is rewritten by `agent.mjs` on every scheduled run. History in `history.jsonl`._
